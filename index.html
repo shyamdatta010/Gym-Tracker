@@ -40,8 +40,17 @@
 <script type="text/babel" data-presets="react" src="app.jsx?v=3"></script>
 
 <script>
+  // Self-healing: wipe out any stale service worker + cache from earlier testing
+  // (on this device or anyone else's) before registering a fresh one. This means
+  // nobody ever has to manually clear storage in DevTools for this to work.
   if ("serviceWorker" in navigator) {
-    window.addEventListener("load", () => {
+    window.addEventListener("load", async () => {
+      try {
+        const regs = await navigator.serviceWorker.getRegistrations();
+        await Promise.all(regs.map((r) => r.unregister()));
+        const keys = await caches.keys();
+        await Promise.all(keys.map((k) => caches.delete(k)));
+      } catch (e) { /* ignore */ }
       navigator.serviceWorker.register("sw.js").catch(() => {});
     });
   }
